@@ -10,4 +10,4 @@ Currently this API URL is https://services5.arcgis.com/frpHL0Fv8koQRVWY/arcgis/r
 The producer is complete and operational, running on our StrongTownsLangley.org VPS server alongside the Apache Kafka instance.
 
 ## About
-This module is written in C# .NET 6.0 and uses the Confluent.Kafka library.
+This module is written in C# .NET 6.0 and uses the Confluent.Kafka library. This project is written by James Hansen.
