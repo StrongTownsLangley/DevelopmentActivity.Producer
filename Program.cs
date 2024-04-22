@@ -5,16 +5,17 @@ using System.Net;
 using System.Text;
 using System.Threading;
 using System.Reflection;
+using System.Xml.Linq;
 
 namespace PermitActivity.Producer
 {
     internal class Program
     {
-        private const string KafkaBootstrapServers = "66.94.126.17:9092";
-        private const string KafkaTopic = "DevelopmentActivity";
-        private const string KafkaGroupId = "default";
+        static string KafkaBootstrapServers;
+        static string KafkaTopic;
         private static ManualResetEventSlim _waitHandle = new ManualResetEventSlim(false);
         private static ProducerConfig _producerConfig = new ProducerConfig { BootstrapServers = KafkaBootstrapServers };
+        static string ExecutingPath = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
 
         // https://data-tol.opendata.arcgis.com/datasets/TOL::development-activity-status-table/about
         private const string DataUrl = "https://services5.arcgis.com/frpHL0Fv8koQRVWY/arcgis/rest/services/Development_Activity_Status_Table/FeatureServer/1/query?outFields=*&where=1%3D1&f=geojson";
@@ -28,14 +29,27 @@ namespace PermitActivity.Producer
             Change
         }
 
+        static void ReadConfig()
+        {
+            try
+            {
+                var doc = XDocument.Load(Path.Combine(ExecutingPath, "config.xml"));
+                KafkaBootstrapServers = doc.Element("Config")?.Element("Kafka")?.Element("BootstrapServers")?.Value;
+                KafkaTopic = doc.Element("Config")?.Element("Kafka")?.Element("Topic")?.Value;
+                ConsoleAndLog($"PROG: Loaded Configuration [{KafkaBootstrapServers}] [{KafkaTopic}]");
+            }
+            catch (Exception ex)
+            {
+                ConsoleAndLog($"PROG: Error reading config from XML: {ex.Message}");
+            }
+        }
+
         static void ConsoleAndLog(string text, bool logOnly = false)
         {
             string date = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
             if(!logOnly)
-                Console.WriteLine("[" + date + "] " + text);
-            var path = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
-            File.AppendAllText(Path.Combine(path, "DevelopmentActivity.Producer.Log.txt"), "[" + date + "] " + text + Environment.NewLine);
-            
+                Console.WriteLine("[" + date + "] " + text);            
+            File.AppendAllText(Path.Combine(ExecutingPath, "DevelopmentActivity.Producer.Log.txt"), "[" + date + "] " + text + Environment.NewLine);            
         }
 
         static void ConsumerErrorHandler(IConsumer<Ignore, string> consumer, Error error)
@@ -226,10 +240,12 @@ namespace PermitActivity.Producer
             Console.WriteLine("║                 for Apache Kafka                  ║");
             Console.WriteLine("╚═══════════════════════════════════════════════════╝");
 
+            ConsoleAndLog("PROG: Program starting");
+            ReadConfig();
 
             var timer = new Timer(async _ =>
             {
-                ConsoleAndLog("WEBAPI: Updating data at " + DateTime.Now.ToString());
+                ConsoleAndLog("WEBAPI: Updating data");
                 await FetchAndSendData();
                 ConsoleAndLog($"PROG: Pausing for {IntervalMinutes} minutes");
             }, null, TimeSpan.Zero, TimeSpan.FromMinutes(IntervalMinutes));
