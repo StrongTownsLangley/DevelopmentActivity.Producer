@@ -1,5 +1,5 @@
 # DevelopmentActivity Project
-Strong Towns Langley's DevelopmentActivity project seeks to use the Apache real-time data processing stack (Kafka, Flink, etc) to track the Development Activity in the Township of Langley, allowing the tracking of new developments, the rate of new developments and applications, approval times, and so on, which will be derived from the static data snapshots available on the Township of Langley's open data portal.
+Strong Towns Langley's DevelopmentActivity project seeks to use real-time data processing tools such as Kafka and the ELK Stack to track and analyze the Development Activity in the Township of Langley, allowing the tracking of new developments, the rate of new developments and applications, approval times, and so on, which will be derived from the static data snapshots available on the Township of Langley's open data portal.
 
 ## DevelopmentActivity.Producer Module
 This module is written in C# .NET 6.0 and uses the Confluent.Kafka library to send Development Activity data to a Kafka instance. It downloads the latest Development Activity data in JSON format, compares it with the last data in the Kafka topic, and if it has changed, sends the latest data to the Kafka topic.
