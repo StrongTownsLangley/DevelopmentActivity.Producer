@@ -4,7 +4,7 @@ Strong Towns Langley's DevelopmentActivity project seeks to use the Apache real-
 ## DevelopmentActivity.Producer Module
 This module is written in C# .NET 6.0 and uses the Confluent.Kafka library to send Development Activity data to a Kafka instance. It downloads the latest Development Activity data in JSON format, compares it with the last data in the Kafka topic, and if it has changed, sends the latest data to the Kafka topic.
 
-![image](https://github.com/StrongTownsLangley/DevelopmentActivity.Producer/assets/160652425/485f67db-cf16-4679-bf67-d0f4764320f2)
+![image](https://github.com/StrongTownsLangley/DevelopmentActivity.Producer/assets/160652425/e0a2d547-7473-48dd-b9d7-c6dce1998f4b)
 
 ## How to install on Linux (Ubuntu)
 1. Install the [.NET 6.0 runtime for linux]([https://learn.microsoft.com/en-us/dotnet/core/install/linux-ubuntu-install?pivots=os-linux-ubuntu-2004&tabs=dotnet6)
