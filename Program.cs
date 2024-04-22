@@ -4,35 +4,136 @@ using System.Diagnostics;
 using System.Net;
 using System.Text;
 using System.Threading;
+using System.Reflection;
 
 namespace PermitActivity.Producer
 {
     internal class Program
     {
-        private const string KafkaBootstrapServers = "localhost:9092";
-        private const string Topic = "DevelopmentActivity";
+        private const string KafkaBootstrapServers = "66.94.126.17:9092";
+        private const string KafkaTopic = "DevelopmentActivity";
+        private const string KafkaGroupId = "default";
         private static ManualResetEventSlim _waitHandle = new ManualResetEventSlim(false);
-
+        private static ProducerConfig _producerConfig = new ProducerConfig { BootstrapServers = KafkaBootstrapServers };
 
         // https://data-tol.opendata.arcgis.com/datasets/TOL::development-activity-status-table/about
         private const string DataUrl = "https://services5.arcgis.com/frpHL0Fv8koQRVWY/arcgis/rest/services/Development_Activity_Status_Table/FeatureServer/1/query?outFields=*&where=1%3D1&f=geojson";
         private const int IntervalMinutes = 30;
 
-        static async Task ProduceToKafka(string data)
+        enum Result
+        {
+            OK,
+            Error,
+            NoChange,
+            Change
+        }
+
+        static void ConsoleAndLog(string text, bool logOnly = false)
+        {
+            string date = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            if(!logOnly)
+                Console.WriteLine("[" + date + "] " + text);
+            var path = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
+            File.AppendAllText(Path.Combine(path, "DevelopmentActivity.Producer.Log.txt"), "[" + date + "] " + text + Environment.NewLine);
+            
+        }
+
+        static void ConsumerErrorHandler(IConsumer<Ignore, string> consumer, Error error)
+        {
+            ConsoleAndLog($"KAFKA CON: Error [{error.Code}] [{error.Reason}]");
+        }
+
+        static void ProducerErrorHandler(IProducer<Null, string> producer, Error error)
+        {
+            ConsoleAndLog($"KAFKA PROD: Error [{error.Code}] [{error.Reason}]");
+        }
+
+        static void ConsumerLogHandler(IConsumer<Ignore, string> consumer, LogMessage log)
+        {
+            if(log.Level == SyslogLevel.Error)
+            {
+                ConsoleAndLog($"KAFKA CON: Error Message [{log.Message}]");
+            } else
+            {
+                ConsoleAndLog($"KAFKA CON: Log Message [{log.Message}]", true);
+            }
+            
+        }
+
+        static void ProducerLogHandler(IProducer<Null, string> producer, LogMessage log)
+        {
+            if (log.Level == SyslogLevel.Error)
+            {
+                ConsoleAndLog($"KAFKA PROD: Error Message [{log.Message}]");
+            }
+            else
+            {
+                ConsoleAndLog($"KAFKA PROD: Log Message [{log.Message}]", true);
+            }
+        }
+
+        static async Task<Result> ProduceToKafka(string data)
         {
             try
-            {
-                var config = new ProducerConfig { BootstrapServers = KafkaBootstrapServers };
-                using (var producer = new ProducerBuilder<Null, string>(config).Build())
+            {                
+                using (var producer = new ProducerBuilder<Null, string>(_producerConfig).SetErrorHandler(ProducerErrorHandler).SetLogHandler(ProducerLogHandler).Build())
                 {
-                    var deliveryResult = await producer.ProduceAsync(Topic, new Message<Null, string> { Value = data });                    
-                    Console.WriteLine($"4. Produced message '{deliveryResult.Value}' to topic {deliveryResult.TopicPartitionOffset}");
+                    var deliveryResult = await producer.ProduceAsync(KafkaTopic, new Message<Null, string> { Value = data });                    
+                    ConsoleAndLog($"KAFKA PROD: Produced message '{deliveryResult.Value}' to topic {deliveryResult.TopicPartitionOffset}");
+                    return Result.OK;
                 }
   
             }
-            catch (ProduceException<Null, string> e)
+            catch (Exception ex)
             {
-                Console.WriteLine($"Failed to deliver message: {e.Message} [{e.Error.Code}]");
+                ConsoleAndLog($"KAFKA PROD: Error [{ex.Message}]");
+                if (ex is ProduceException<Null, string>)
+                {
+                    var e = ex as ProduceException<Null, string>;
+                    ConsoleAndLog($"KAFKA PROD: Exception Code [{e.Error.Reason}] [{e.Error.Code}]");
+                }
+                return Result.Error;
+            }
+        }
+        static async Task<Result> CompareToKafka(string newData)
+        {
+            try
+            {
+                var _consumerConfig = new ConsumerConfig { BootstrapServers = KafkaBootstrapServers, GroupId = Guid.NewGuid().ToString(), EnableAutoCommit = false };
+                using (var consumer = new ConsumerBuilder<Ignore, string>(_consumerConfig).SetErrorHandler(ConsumerErrorHandler).SetLogHandler(ConsumerLogHandler).Build())
+                {
+                    // Seek to Latest Result
+                    TopicPartition topicPartition = new(KafkaTopic, new Partition(0));
+                    WatermarkOffsets watermarkOffsets = consumer.QueryWatermarkOffsets(topicPartition, TimeSpan.FromSeconds(3));
+                    TopicPartitionOffset topicPartitionOffset = new(topicPartition, new Offset(watermarkOffsets.High.Value - 1));
+                    consumer.Assign(topicPartitionOffset);
+
+                    // Fetch
+                    var consumeResult = consumer.Consume(TimeSpan.FromSeconds(5)); // Adjust timeout as needed
+                    if (consumeResult == null || consumeResult.IsPartitionEOF)
+                    {
+                        ConsoleAndLog("KAFKA CON: No messages found in the Kafka topic.");
+                        return Result.Change; // No message in Kafka, consider it as different
+                    }
+
+                    var lastMessage = consumeResult.Message.Value;
+                    if(lastMessage != null)
+                    {
+                        ConsoleAndLog("KAFKA CON: Last message is " + lastMessage.Length + " bytes");
+                    }
+
+                    return newData != lastMessage ? Result.Change : Result.NoChange;
+                }
+            }
+            catch (Exception ex)
+            {
+                ConsoleAndLog($"KAFKA CON: Error [{ex.Message}]");
+                if (ex is ConsumeException)
+                {
+                    var e = ex as ConsumeException;
+                    ConsoleAndLog($"KAFKA CON: Consume Exception [{e.Error.Reason}] [{e.Error.Code}]");                    
+                }
+                return Result.Error;
             }
         }
 
@@ -54,12 +155,12 @@ namespace PermitActivity.Producer
                     {
                         if (args.Error != null)
                         {
-                            Console.WriteLine($"Error while fetching data: {args.Error.Message}");
+                            ConsoleAndLog($"WEBAPI: Error while fetching data: {args.Error.Message}");
                         }
                         else
                         {
-                            Console.WriteLine("");
-                            Console.WriteLine("2. Download Complete");
+                            Console.WriteLine(""); // Skip after progress bar
+                            ConsoleAndLog("WEBAPI: Download Complete");
                             jsonData.Append(args.Result);
                             downloadCompleted.SetResult(true);
                         }
@@ -73,17 +174,31 @@ namespace PermitActivity.Producer
                     if (!downloadCompleted.Task.IsCompleted)
                     {
                         webClient.CancelAsync();
-                        Console.WriteLine("Download timed out.");
+                        ConsoleAndLog("WEBAPI: Download timed out.");
                         return;
                     }
+                    var newData = jsonData.ToString();
+                    ConsoleAndLog("PROG: New data is " + newData.Length + " bytes");
+                    ConsoleAndLog("PROG: Comparing to Last Kafka Datapoint");
 
-                    Console.WriteLine("3. Sending to Kafka");
-                    await ProduceToKafka(jsonData.ToString());
+                    var compareResult = await CompareToKafka(newData);
+
+                    if (compareResult == Result.Change)
+                    {
+                        ConsoleAndLog("PROG: Data has changed, producing new data to Kafka");
+                        await ProduceToKafka(newData);
+                    } else if (compareResult == Result.NoChange)
+                    {
+                        ConsoleAndLog("PROG: No change to data, no action taken");
+                    } else if (compareResult == Result.Error)
+                    {
+                        ConsoleAndLog("PROG: Error when comparing data, no action taken");                        
+                    }
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error while fetching data: {ex.Message}");
+                ConsoleAndLog($"PROG: Error {ex.Message}");
             }
         }
 
@@ -108,15 +223,15 @@ namespace PermitActivity.Producer
             Console.WriteLine("║                                                   ║");
             Console.WriteLine("║                Strong Towns Langley               ║");
             Console.WriteLine("║           Development Activity Analytics          ║");
-            Console.WriteLine("║                 for Apache Kafka                  ║");            
+            Console.WriteLine("║                 for Apache Kafka                  ║");
             Console.WriteLine("╚═══════════════════════════════════════════════════╝");
 
 
             var timer = new Timer(async _ =>
             {
-                Console.WriteLine("1. Updating data at " + DateTime.Now.ToString());
+                ConsoleAndLog("WEBAPI: Updating data at " + DateTime.Now.ToString());
                 await FetchAndSendData();
-                Console.WriteLine($"5. Pausing for {IntervalMinutes} minutes");
+                ConsoleAndLog($"PROG: Pausing for {IntervalMinutes} minutes");
             }, null, TimeSpan.Zero, TimeSpan.FromMinutes(IntervalMinutes));
 
             _waitHandle.Wait(); // Wait indefinitely, keeping the main thread alive
