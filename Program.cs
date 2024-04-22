@@ -13,13 +13,13 @@ namespace PermitActivity.Producer
     {
         static string KafkaBootstrapServers;
         static string KafkaTopic;
+        static int IntervalMinutes;
         private static ManualResetEventSlim _waitHandle = new ManualResetEventSlim(false);
         private static ProducerConfig _producerConfig = new ProducerConfig { BootstrapServers = KafkaBootstrapServers };
         static string ExecutingPath = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
 
         // https://data-tol.opendata.arcgis.com/datasets/TOL::development-activity-status-table/about
-        private const string DataUrl = "https://services5.arcgis.com/frpHL0Fv8koQRVWY/arcgis/rest/services/Development_Activity_Status_Table/FeatureServer/1/query?outFields=*&where=1%3D1&f=geojson";
-        private const int IntervalMinutes = 30;
+        private const string DataUrl = "https://services5.arcgis.com/frpHL0Fv8koQRVWY/arcgis/rest/services/Development_Activity_Status_Table/FeatureServer/1/query?outFields=*&where=1%3D1&f=geojson";        
 
         enum Result
         {
@@ -29,18 +29,21 @@ namespace PermitActivity.Producer
             Change
         }
 
-        static void ReadConfig()
+        static Result ReadConfig()
         {
             try
             {
                 var doc = XDocument.Load(Path.Combine(ExecutingPath, "config.xml"));
                 KafkaBootstrapServers = doc.Element("Config")?.Element("Kafka")?.Element("BootstrapServers")?.Value;
                 KafkaTopic = doc.Element("Config")?.Element("Kafka")?.Element("Topic")?.Value;
-                ConsoleAndLog($"PROG: Loaded Configuration [{KafkaBootstrapServers}] [{KafkaTopic}]");
+                int.TryParse(doc.Element("Config")?.Element("IntervalMinutes")?.Value, out IntervalMinutes);
+                ConsoleAndLog($"PROG: Loaded Configuration [{KafkaBootstrapServers}] [{KafkaTopic}] [{IntervalMinutes}m Interval]");
+                return Result.OK;
             }
             catch (Exception ex)
             {
                 ConsoleAndLog($"PROG: Error reading config from XML: {ex.Message}");
+                return Result.Error;
             }
         }
 
@@ -241,7 +244,11 @@ namespace PermitActivity.Producer
             Console.WriteLine("╚═══════════════════════════════════════════════════╝");
 
             ConsoleAndLog("PROG: Program starting");
-            ReadConfig();
+            if(ReadConfig() == Result.Error)
+            {
+                ConsoleAndLog("PROG: Exiting...");
+                return;
+            }
 
             var timer = new Timer(async _ =>
             {

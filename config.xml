@@ -3,4 +3,5 @@
     <BootstrapServers>127.0.0.1:9092</BootstrapServers>
     <Topic>DevelopmentActivity</Topic>
   </Kafka>
+  <IntervalMinutes>30</IntervalMinutes>
 </Config>
