@@ -7,9 +7,7 @@ The Township of Langley releases this data with no license requirements or restr
 Currently this API URL is https://services5.arcgis.com/frpHL0Fv8koQRVWY/arcgis/rest/services/Development_Activity_Status_Table/FeatureServer/1/query?outFields=*&where=1%3D1&f=geojson but this could change in future.
 
 ## Status
-So far this producer is complete and operational, running on our StrongTownsLangley.org VPS server alongside the Apache Kafka instance.
-
-Public analytics and other tools are still in development.
+The producer is complete and operational, running on our StrongTownsLangley.org VPS server alongside the Apache Kafka instance.
 
 ## About
 This module is written in C# .NET 6.0 and uses the Confluent.Kafka library.
