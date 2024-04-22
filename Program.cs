@@ -14,13 +14,11 @@ namespace PermitActivity.Producer
         static string KafkaBootstrapServers;
         static string KafkaTopic;
         static int IntervalMinutes;
+        static string DataUrl;
         private static ManualResetEventSlim _waitHandle = new ManualResetEventSlim(false);
         private static ProducerConfig _producerConfig = new ProducerConfig { BootstrapServers = KafkaBootstrapServers };
         static string ExecutingPath = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
-
-        // https://data-tol.opendata.arcgis.com/datasets/TOL::development-activity-status-table/about
-        private const string DataUrl = "https://services5.arcgis.com/frpHL0Fv8koQRVWY/arcgis/rest/services/Development_Activity_Status_Table/FeatureServer/1/query?outFields=*&where=1%3D1&f=geojson";        
-
+        
         enum Result
         {
             OK,
@@ -35,9 +33,11 @@ namespace PermitActivity.Producer
             {
                 var doc = XDocument.Load(Path.Combine(ExecutingPath, "config.xml"));
                 KafkaBootstrapServers = doc.Element("Config")?.Element("Kafka")?.Element("BootstrapServers")?.Value;
-                KafkaTopic = doc.Element("Config")?.Element("Kafka")?.Element("Topic")?.Value;
+                KafkaTopic = doc.Element("Config")?.Element("Kafka")?.Element("Topic")?.Value;                
                 int.TryParse(doc.Element("Config")?.Element("IntervalMinutes")?.Value, out IntervalMinutes);
+                DataUrl = doc.Element("Config")?.Element("DataUrl")?.Value;
                 ConsoleAndLog($"PROG: Loaded Configuration [{KafkaBootstrapServers}] [{KafkaTopic}] [{IntervalMinutes}m Interval]");
+                ConsoleAndLog($"PROG: WEBAPI URL Set to [{DataUrl}]");
                 return Result.OK;
             }
             catch (Exception ex)
