@@ -16,7 +16,6 @@ namespace PermitActivity.Producer
         static int IntervalMinutes;
         static string DataUrl;
         private static ManualResetEventSlim _waitHandle = new ManualResetEventSlim(false);
-        private static ProducerConfig _producerConfig = new ProducerConfig { BootstrapServers = KafkaBootstrapServers };
         static string ExecutingPath = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
         
         enum Result
@@ -67,15 +66,20 @@ namespace PermitActivity.Producer
 
         static void ConsumerLogHandler(IConsumer<Ignore, string> consumer, LogMessage log)
         {
-            if(log.Level == SyslogLevel.Error)
+            if (log.Level == SyslogLevel.Error)
             {
                 ConsoleAndLog($"KAFKA CON: Error Message [{log.Message}]");
-            } else
+            }
+            else if (log.Level == SyslogLevel.Warning)
+            {
+                ConsoleAndLog($"KAFKA CON: Warning Message [{log.Message}]", true);
+            }
+            else
             {
                 ConsoleAndLog($"KAFKA CON: Log Message [{log.Message}]", true);
             }
-            
-        }
+
+            }
 
         static void ProducerLogHandler(IProducer<Null, string> producer, LogMessage log)
         {
@@ -83,7 +87,10 @@ namespace PermitActivity.Producer
             {
                 ConsoleAndLog($"KAFKA PROD: Error Message [{log.Message}]");
             }
-            else
+            else if (log.Level == SyslogLevel.Warning)
+            {
+                ConsoleAndLog($"KAFKA PROD: Warning Message [{log.Message}]", true);
+            } else
             {
                 ConsoleAndLog($"KAFKA PROD: Log Message [{log.Message}]", true);
             }
@@ -92,11 +99,12 @@ namespace PermitActivity.Producer
         static async Task<Result> ProduceToKafka(string data)
         {
             try
-            {                
+            {
+                ProducerConfig _producerConfig = new ProducerConfig { BootstrapServers = KafkaBootstrapServers };
                 using (var producer = new ProducerBuilder<Null, string>(_producerConfig).SetErrorHandler(ProducerErrorHandler).SetLogHandler(ProducerLogHandler).Build())
                 {
                     var deliveryResult = await producer.ProduceAsync(KafkaTopic, new Message<Null, string> { Value = data });                    
-                    ConsoleAndLog($"KAFKA PROD: Produced message '{deliveryResult.Value}' to topic {deliveryResult.TopicPartitionOffset}");
+                    ConsoleAndLog($"KAFKA PROD: Produced message to topic {deliveryResult.TopicPartitionOffset}");
                     return Result.OK;
                 }
   
