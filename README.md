@@ -1,6 +1,8 @@
 # DevelopmentActivity Project
 Strong Towns Langley's DevelopmentActivity project seeks to use real-time data processing tools such as Kafka and the ELK Stack to track and analyze the Development Activity in the Township of Langley, allowing the tracking of new developments, the rate of new developments and applications, approval times, and so on, which will be derived from the static data snapshots available on the Township of Langley's open data portal.
 
+In particular this will be used to track the uptake and success of the pending local implementation of British Columbia's Bill 44 **SSMUH** Multiplex legislation as data is being tracked beginning in April 2024, with implementation scheduled for June 2024.
+
 ## DevelopmentActivity.Producer Module
 This module is written in C# .NET 6.0 and uses the Confluent.Kafka library to send Development Activity data to a Kafka instance and the Elastic.Clients.Elasticsearch library to send data to an ElasticSearch instance. It downloads the latest Development Activity data in JSON format, compares it with the last data in the Kafka topic and/or ElasticSearch index, and if it has changed, updates them with the latest data.
 
