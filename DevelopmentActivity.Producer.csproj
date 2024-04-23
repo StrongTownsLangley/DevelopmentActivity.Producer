@@ -8,7 +8,14 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="DevelopmentActivity.Producer.Log.txt" />
+    <None Remove="kafka.png" />
+    <None Remove="producer.png" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Confluent.Kafka" Version="2.3.0" />
+    <PackageReference Include="Elastic.Clients.Elasticsearch" Version="8.13.9" />
   </ItemGroup>
 
 </Project>

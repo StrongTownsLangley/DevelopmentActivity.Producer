@@ -1,8 +1,15 @@
 <Config>
   <Kafka>
+	<Enabled>True</Enabled>
     <BootstrapServers>127.0.0.1:9092</BootstrapServers>
     <Topic>DevelopmentActivity</Topic>
   </Kafka>
+  <Elastic>
+	<Enabled>True</Enabled>
+    <Server>127.0.0.1:9200</Server>
+    <Index>development_activity</Index>
+    <APIKey></APIKey>	
+  </Elastic>	
   <IntervalMinutes>30</IntervalMinutes>
   <DataUrl><![CDATA[https://services5.arcgis.com/frpHL0Fv8koQRVWY/arcgis/rest/services/Development_Activity_Status_Table/FeatureServer/1/query?outFields=*&where=1%3D1&f=json]]></DataUrl>
 </Config>
