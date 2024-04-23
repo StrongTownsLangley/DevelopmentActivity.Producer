@@ -23,4 +23,6 @@ https://services5.arcgis.com/frpHL0Fv8koQRVWY/arcgis/rest/services/Development_A
 The "f" parameter is shown on the about page as *geojson*, but as their is no geojson data such as polygon information, we can change this to *json* and also receive all the column specifications as well as the data.
 
 ## Status
-The producer is complete and operational, running on our StrongTownsLangley.org VPS server alongside the Apache Kafka instance.
+The producer is complete and operational, running on our StrongTownsLangley.org VPS server alongside the Apache Kafka and ElasticSearch / Kibana instance.
+
+Demo access to the Kibana for live viewing of the data coming soon.
