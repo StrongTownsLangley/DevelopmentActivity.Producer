@@ -122,8 +122,19 @@ namespace DevelopmentActivity.Producer
                 // General / WEBAPI
                 int.TryParse(doc.Element("Config")?.Element("IntervalMinutes")?.Value, out IntervalMinutes);
                 DataUrl = doc.Element("Config")?.Element("DataUrl")?.Value;
-                ConsoleAndLog($"PROG: Elastic Configuration [{ElasticServer}] [{ElasticIndex}]");
-                ConsoleAndLog($"PROG: Kafka Configuration [{KafkaBootstrapServers}] [{KafkaTopic}]");
+
+                if (ElasticEnabled)
+                    ConsoleAndLog($"PROG: Elastic Configuration [{ElasticServer}] [{ElasticIndex}]");
+
+                if (KafkaEnabled)
+                    ConsoleAndLog($"PROG: Kafka Configuration [{KafkaBootstrapServers}] [{KafkaTopic}]");
+                
+                if(!ElasticEnabled && !KafkaEnabled)
+                {
+                    ConsoleAndLog($"PROG: Please enable Elastic or Kafka.");
+                    return Result.Error;
+                }
+
                 ConsoleAndLog($"PROG: WEBAPI Configuration [{DataUrl}] [{IntervalMinutes}m Interval]");
                 return Result.OK;
             }
