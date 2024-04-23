@@ -2,7 +2,7 @@
 Strong Towns Langley's DevelopmentActivity project seeks to use real-time data processing tools such as Kafka and the ELK Stack to track and analyze the Development Activity in the Township of Langley, allowing the tracking of new developments, the rate of new developments and applications, approval times, and so on, which will be derived from the static data snapshots available on the Township of Langley's open data portal.
 
 ## DevelopmentActivity.Producer Module
-This module is written in C# .NET 6.0 and uses the Confluent.Kafka library to send Development Activity data to a Kafka instance. It downloads the latest Development Activity data in JSON format, compares it with the last data in the Kafka topic, and if it has changed, sends the latest data to the Kafka topic.
+This module is written in C# .NET 6.0 and uses the Confluent.Kafka library to send Development Activity data to a Kafka instance and the Elastic.Clients.Elasticsearch library to send data to an ElasticSearch instance. It downloads the latest Development Activity data in JSON format, compares it with the last data in the Kafka topic and/or ElasticSearch index, and if it has changed, updates them with the latest data.
 
 ![image](https://github.com/StrongTownsLangley/DevelopmentActivity.Producer/assets/160652425/e0a2d547-7473-48dd-b9d7-c6dce1998f4b)
 
@@ -10,7 +10,8 @@ This module is written in C# .NET 6.0 and uses the Confluent.Kafka library to se
 1. Install the [.NET 6.0 runtime for linux]([https://learn.microsoft.com/en-us/dotnet/core/install/linux-ubuntu-install?pivots=os-linux-ubuntu-2004&tabs=dotnet6)
 2. Upload the source code to a folder on the server and cd to the folder
 3. Run **dotnet build**
-4. Run **dotnet run** (you may wish to do this in [screen](https://www.gnu.org/software/screen/manual/screen.html) to allow disconnecting/reconnecting)   
+4. Place **config.xml** in binary folder (bin/debug/net6.0)
+5. Run **dotnet run** (you may wish to do this in [screen](https://www.gnu.org/software/screen/manual/screen.html) to allow disconnecting/reconnecting)   
 
 This project is written by James Hansen.
 
