@@ -319,7 +319,7 @@ namespace DevelopmentActivity.Producer
                 var lastDataResponse = await _elasticSearchClient.SearchAsync<JsonNode>(s => s
                     .Index(ElasticIndex)
                     .Size(1)  // Retrieve only the last document
-                    .Sort(sort => sort.Field("timestamp"))  // Sort by descending document ID to get the last document
+                    .Sort(sort => sort.Field("timestamp", new FieldSort { Order = SortOrder.Desc }))  // Sort by descending document ID to get the last document
                 );
 
                 if (!lastDataResponse.IsValidResponse)
